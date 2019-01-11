@@ -44,8 +44,7 @@ def generate_kmers(line,k,alphabet={'A':'A','C':'C','G':'G','T':'T'}):
         if len(kmer) == k:
             yield kmer
 
-def embed_reads(path_sample,path_totalkmers,path_model,path_out,k=None,
-        normread=True,to_sample=False,a=1e-5,n_components=1,
+def embed_reads(path_sample,path_totalkmers,path_model,path_out,k=None,a=1e-5,n_components=1,
         delim=None,svm=True,verbose=True,v=1000):
     
     sample_id = os.path.basename(os.path.normpath(path_sample)).split('.')[0]
@@ -67,16 +66,10 @@ def embed_reads(path_sample,path_totalkmers,path_model,path_out,k=None,
     if verbose:
         print('Total reads in sample %s: %s.' % (sample_id,total_reads))
 
-    if normread:
-        print('Normalizing each read by total number of kmers in that read.')
-    else:
-        print('Normalizing each read by total number of kmers in the sample.')
-
     file = open(path_sample,'r')
 
     i = 0
     read_ids = []
-    n_kmer = 0
     reads = np.zeros((d,total_reads),dtype='float64')
     for line in file:
         if line[0] == '>':
@@ -90,33 +83,22 @@ def embed_reads(path_sample,path_totalkmers,path_model,path_out,k=None,
                     print('Processing %s: %s/%s.' % (read_id,i,total_reads))
         else:
             r = np.zeros(d,dtype='float64')
+            n_kmer = 0
             kmers = generate_kmers(line,k)
             for kmer in kmers:
-                try:
+                if kmer in model:
                     r += model[kmer] * a/(a + total_kmers[kmer])
                     n_kmer += 1
-                except KeyError:
-                    continue
-            reads[:,i] = r
-            if normread:
-                reads[:,i] /= n_kmer
-                n_kmer = 0
+            reads[:,i] = r/n_kmer
             i += 1
 
-    if not normread:
-        reads /= n_kmer
 
     fn_sample = '%s_%s_remb_raw.csv.gz' % (sample_id,fn_sample_base) 
     path_out2 = os.path.join(path_out,fn_sample)
     if verbose:
         print('Saving reads to %s.' % (path_out2))
-    
-    if to_sample:
-        df = pd.DataFrame(np.sum(reads.T,axis=0).reshape(1,-1),index=[sample_id])
-        df.to_csv(path_out2,compression='gzip',header=False)
-    else:
-        df = pd.DataFrame(reads.T,index=read_ids)
-        df.to_csv(path_out2,compression='gzip')
+    df = pd.DataFrame(reads.T,index=read_ids)
+    df.to_csv(path_out2,compression='gzip')
 
     if svm:
         if verbose:
@@ -126,16 +108,12 @@ def embed_reads(path_sample,path_totalkmers,path_model,path_out,k=None,
         pc = svd.components_
         reads -= reads.dot(pc.T) * pc
 
-        fn_sample = '%s_%s_remb.csv.gz' % (sample_id,fn_sample_base) 
-        path_out2 = os.path.join(path_out,fn_sample)
-        if verbose:
-            print('Saving reads to %s.' % (path_out2))
-        if to_sample:
-            df = pd.DataFrame(np.sum(reads.T,axis=0).reshape(1,-1),index=[sample_id])
-            df.to_csv(path_out2,compression='gzip',header=False)
-        else:
-            df = pd.DataFrame(reads.T,index=read_ids)
-            df.to_csv(path_out2,compression='gzip')
+    fn_sample = '%s_%s_remb.csv.gz' % (sample_id,fn_sample_base) 
+    path_out2 = os.path.join(path_out,fn_sample)
+    if verbose:
+        print('Saving reads to %s.' % (path_out2))
+    df = pd.DataFrame(reads.T,index=read_ids)
+    df.to_csv(path_out2,compression='gzip')
 
 def plot_embeddings(embedding, ids, taxa, taxon_level = 'genus', taxon_parent_rank = 0,
                     n = 8, min_taxa = 10, n_iter = 1000, p = None, seed = None,

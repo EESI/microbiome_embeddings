@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+
 from sys import argv
 import os
 import zipfile
@@ -27,23 +28,24 @@ from gensim.models.word2vec import LineSentence
 import embed_functions as emb
 import r2v_functions as r2v
 
-name = 'ag'
-a = 1e-05
+name_reads = 'ag'
+dir_out = '/mnt/HA/groups/rosenGrp/embed_samples/data/%s/total_kmers' % (name_reads)
 
-path_sample = argv[1]
+path_reads = argv[1]
 path_model = argv[2]
 
 fn_model_base = path_model.split('/')[-1]
-k = int(fn_model_base.split('_')[1])
 fn_model_base = '_'.join(fn_model_base.split('_')[1:-1])
-fn_out = '%s_%s_total_kmers_split.pkl' % (name,fn_model_base)
+fn_out = '%s_%s_total_kmers.pkl' % (name_reads,fn_model_base)
+path_out = os.path.join(dir_out,fn_out)
+model_fn = path_model.split('/')[-1]
+k = int(model_fn.split('_')[1])
 
-dir_totalkmers = '/mnt/HA/groups/rosenGrp/embed_samples/data/%s/total_kmers' % (name)
-path_totalkmers = os.path.join(dir_totalkmers,fn_out)
+if not os.path.exists(dir_out):
+    os.makedirs(dir_out)
 
-path_out = '/mnt/HA/groups/rosenGrp/embed_samples/data/%s/embeddings_split' % (name)
-path_out = os.path.join(path_out,fn_model_base)
-if not os.path.exists(path_out):
-    os.makedirs(path_out)
+print('Calculating kmer totals for %s using model %s.' % (path_reads,path_model))
+total_kmers = r2v.calc_total_kmers(path_reads,path_model,k,verbose=True,v=10000)
 
-r2v.embed_reads(path_sample,path_totalkmers,path_model,path_out,k=k,a=a,delim=' ',verbose=True,v=1000)
+print('Saving dictionary.')
+six.moves.cPickle.dump(total_kmers,open(path_out,'wb'),protocol=4)

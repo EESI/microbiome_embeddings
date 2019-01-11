@@ -27,23 +27,28 @@ from gensim.models.word2vec import LineSentence
 import embed_functions as emb
 import r2v_functions as r2v
 
-name = 'ag'
-a = 1e-05
+param_row = int(argv[1])
 
-path_sample = argv[1]
-path_model = argv[2]
+name_sample = 'kegg'
+path_params = '/home/sw424/embed_samples/code/read_params.csv'
+path_totalkmers = '/home/sw424/embed_samples/out/total_kmers.pkl'
+path_out = '/home/sw424/embed_samples/out/%s_reads_embeddings/' % (name_sample)
+path_sample = '/home/sw424/embed_samples/data/%s/seqs.fasta' % (name_sample)
 
+params = open(path_params,'r').readlines()[param_row].rstrip().split(',')
+a = float(params[0])
+path_model = params[1]
+
+model_fn = path_model.split('/')[-1]
+k = int(model_fn.split('_')[1])
+
+dir_totalkmers = '/home/sw424/embed_samples/data/%s/' % (name_sample)
 fn_model_base = path_model.split('/')[-1]
-k = int(fn_model_base.split('_')[1])
 fn_model_base = '_'.join(fn_model_base.split('_')[1:-1])
-fn_out = '%s_%s_total_kmers_split.pkl' % (name,fn_model_base)
-
-dir_totalkmers = '/mnt/HA/groups/rosenGrp/embed_samples/data/%s/total_kmers' % (name)
+fn_out = '%s_%s_total_kmers.pkl' % (name_sample,fn_model_base)
 path_totalkmers = os.path.join(dir_totalkmers,fn_out)
 
-path_out = '/mnt/HA/groups/rosenGrp/embed_samples/data/%s/embeddings_split' % (name)
-path_out = os.path.join(path_out,fn_model_base)
 if not os.path.exists(path_out):
     os.makedirs(path_out)
 
-r2v.embed_reads(path_sample,path_totalkmers,path_model,path_out,k=k,a=a,delim=' ',verbose=True,v=1000)
+r2v.embed_reads(path_sample,path_totalkmers,path_model,path_out,k=k,a=a,delim=None,verbose=True,v=1000)
